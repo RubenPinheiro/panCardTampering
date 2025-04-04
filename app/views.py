@@ -17,63 +17,72 @@ import os
 main = Blueprint('main', __name__)
 
 # Adding path to config
-# app.config['INITIAL_FILE_UPLOADS'] = 'app/static/uploads'
-# app.config['EXISTING_FILE'] = 'app/static/original'
-# app.config['GENERATED_FILE'] = 'app/static/generated'
+current_app.config['INITIAL_FILE_UPLOADS'] = 'app/static/uploads'
+current_app.config['EXISTING_FILE'] = 'app/static/original'
+current_app.config['GENERATED_FILE'] = 'app/static/generated'
 
 # Route to home page
 @main.route('/', methods=['GET', 'POST'])
+
 def index():
+    # Handling errors
+    try:
+        # Execute if request is get
+        if request.method == 'GET':
+            return render_template('index.html')
 
-    # Execute if request is get
-    if request.method == 'GET':
-        return render_template('index.html')
+        # Execute if request is post
+        if request.method == 'POST':
+            # Get uploaded image
+            file_upload = request.files['file_upload']
+            filename = file_upload.filename
 
-    # Execute if request is post
-    if request.method == 'POST':
-        # Get uploaded image
-        file_upload = request.files['file_upload']
-        filename = file_upload.filename
+            # Resize and save uploaded image
+            uploaded_image = Image.open(file_upload).resize((250, 160))
+            # Convert RGBA to RGB
+            if uploaded_image.mode == "RGBA":
+                uploaded_image = uploaded_image.convert("RGB")
+            uploaded_image.save(os.path.join(current_app.config['INITIAL_FILE_UPLOADS'], 'image.jpg'))
+            print(f"Image saved to {os.path.join(current_app.config['INITIAL_FILE_UPLOADS'], 'image.jpg')}")
 
-        # Resize and save uploaded image, if image == RBGA, converts it to RGB
-        uploaded_image = Image.open(file_upload).resize((250,160))
-        if uploaded_image.mode == "RGBA":
-            uploaded_image = uploaded_image.convert("RGB")  # Convert RGBA to RGB
-        uploaded_image.save(os.path.join(current_app.config['INITIAL_FILE_UPLOADS'], 'image.jpg'))
+            # Read uploaded and original image as array
+            original_image = cv2.imread(os.path.join(current_app.config['EXISTING_FILE'], 'image.jpg'))
+            uploaded_image = cv2.imread(os.path.join(current_app.config['INITIAL_FILE_UPLOADS'], 'image.jpg'))
 
-        uploaded_image.save(os.path.join(current_app.config['INITIAL_FILE_UPLOADS'], 'image.jpg'))
+            # convert to greyscale
+            original_grey = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
+            uploaded_grey = cv2.cvtColor(uploaded_image, cv2.COLOR_BGR2GRAY)
 
-        # Read uploaded and original image as array
-        original_image = cv2.imread(os.path.join(current_app.config['EXISTING_FILE'], 'image.jpg'))
-        uploaded_image = cv2.imread(os.path.join(current_app.config['INITIAL_FILE_UPLOADS'], 'image.jpg'))
+            # Computing the Structural Similarity Index (SSIM) betweem both images and returning the diff image (full=)
+            (score, diff) = structural_similarity(original_grey, uploaded_grey, full=True)
+            diff = (diff * 255).astype("uint8")
 
-        # convert to greyscale
-        original_grey = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
-        uploaded_grey = cv2.cvtColor(uploaded_image, cv2.COLOR_BGR2GRAY)
+            # Calculating threshold and contours
+            # Here we transform the diff grayscale image into a binary image
+            thresh = cv2.threshold(diff, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+            cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            cnts = imutils.grab_contours(cnts)
 
-        # Computing the Structural Similarity Index (SSIM) betweem both images and returning the diff image (full=)
-        (score, diff) = structural_similarity(original_grey, uploaded_grey, full=True)
-        diff = (diff * 255).astype("uint8")
+            # Here we compute the bounding box of the countour and then draw the bounding box on both input images to represent where they differ
+            for c in cnts:
+                # applying contours on image --> w= width | h= height
+                (x, y, w, h) = cv2.boundingRect(c)
+                cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                cv2.rectangle(uploaded_image, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
-        # Calculating threshold and contours
-        # Here we transform the diff grayscale image into a binary image
-        thresh = cv2.threshold(diff, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-        cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = imutils.grab_contours(cnts)
+            # Save all output images (if requested)
+            cv2.imwrite(os.path.join(current_app.config['GENERATED_FILE'], 'image_original.jpg'), original_image)
+            cv2.imwrite(os.path.join(current_app.config['GENERATED_FILE'], 'image_uploaded.jpg'), uploaded_image)
+            cv2.imwrite(os.path.join(current_app.config['GENERATED_FILE'], 'image_diff.jpg'), diff)
+            cv2.imwrite(os.path.join(current_app.config['GENERATED_FILE'], 'image_thresh.jpg'), thresh)
 
-        # Here we compute the bounding box of the countour and then draw the bounding box on both input images to represent where they differ
-        for c in cnts:
-            # applying contours on image --> w= width | h= height
-            (x, y, w, h) = cv2.boundingRect(c)
-            cv2.rectangle(original_image, (x, y), (x + w, y + h), (0, 0, 255), 2)
-            cv2.rectangle(uploaded_image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+            return render_template('index.html', prod=str(round(score * 100, 2)) + '%' + 'correct')
 
-        # Save all output images (if requested)
-        cv2.imwrite(os.path.join(current_app.config['GENERATED_FILE'], 'image_original.jpg'), original_image)
-        cv2.imwrite(os.path.join(current_app.config['GENERATED_FILE'], 'image_uploaded.jpg'), uploaded_image)
-        cv2.imwrite(os.path.join(current_app.config['GENERATED_FILE'], 'image_diff.jpg'), diff)
-        cv2.imwrite(os.path.join(current_app.config['GENERATED_FILE'], 'image_thresh.jpg'), thresh)
-        return render_template('index.html', prod=str(round(score * 100, 2)) + '%' + 'correct')
+    except Exception as e:
+        print(f"Error: {e}")
+        return render_template('index.html', prod="An error occurred. Please try again.")
+
+
 
 # Main function
 #if __name__ == '__main__':

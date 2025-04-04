@@ -14,7 +14,7 @@
     <div class="nav-wrapper container">
       <a id="logo-container" class="brand-logo center"><h5>Pan Card Tampering</h5></a>
       <div style="margin-left: 800px">
-      	   Made by <a class="orange-text text-lighten-3">Montada Projects</a>
+      	   Made by <a class="orange-text text-lighten-3">MontadaProjects</a>
       </div>
     </div>
   </nav>
@@ -49,7 +49,11 @@
           </div>
         </form>
        	<div style="text-align: center; padding-top: 50px">
-      		<h5>{{pred}}</h5>
+      		{% if prod %}
+              <h5>{{ prod }}</h5>
+            {% else %}
+              <h5 style="color: red;">No result yet. Please upload an image and click "Check".</h5>
+            {% endif %}
      	</div>
 
       </div>
