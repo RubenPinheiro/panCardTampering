@@ -35,8 +35,12 @@ def index():
         file_upload = request.files['file_upload']
         filename = file_upload.filename
 
-        # Resize and save uploaded image
+        # Resize and save uploaded image, if image == RBGA, converts it to RGB
         uploaded_image = Image.open(file_upload).resize((250,160))
+        if uploaded_image.mode == "RGBA":
+            uploaded_image = uploaded_image.convert("RGB")  # Convert RGBA to RGB
+        uploaded_image.save(os.path.join(current_app.config['INITIAL_FILE_UPLOADS'], 'image.jpg'))
+
         uploaded_image.save(os.path.join(current_app.config['INITIAL_FILE_UPLOADS'], 'image.jpg'))
 
         # Read uploaded and original image as array
