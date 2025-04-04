@@ -1,5 +1,5 @@
-Pan Card Tampering Detection
 📌 Project Overview
+
 Pan Card Tampering Detection is a web-based application that analyzes PAN card images to detect modifications or tampering. By using computer vision and image similarity techniques, the application compares an uploaded image against an original version and highlights the differences. This project is useful for verifying document authenticity and preventing fraud.
 
 The application is built with Flask for the backend and utilizes OpenCV and scikit-image for image processing. Deployment is handled via Railway, and version control is managed with Git and GitHub.
