@@ -16,10 +16,10 @@ import os
 # Define blueprint
 main = Blueprint('main', __name__)
 
-# Adding path to config
-current_app.config['INITIAL_FILE_UPLOADS'] = 'app/static/uploads'
-current_app.config['EXISTING_FILE'] = 'app/static/original'
-current_app.config['GENERATED_FILE'] = 'app/static/generated'
+# Adding path to config --> moved to _init_
+#current_app.config['INITIAL_FILE_UPLOADS'] = 'app/static/uploads'
+#current_app.config['EXISTING_FILE'] = 'app/static/original'
+#current_app.config['GENERATED_FILE'] = 'app/static/generated'
 
 # Route to home page
 @main.route('/', methods=['GET', 'POST'])
